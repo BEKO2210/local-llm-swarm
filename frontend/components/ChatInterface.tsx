@@ -167,8 +167,12 @@ export default function ChatInterface({
           const lines = chunk.split('\n');
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('data:')) {
+              const data = trimmedLine.slice(5).trim();
+
+              // Skip empty data
+              if (!data) continue;
 
               // Check for conversation ID
               if (data.startsWith('[CONVERSATION_ID:')) {
@@ -197,6 +201,9 @@ export default function ChatInterface({
               // Unescape newlines
               const content = data.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
               accumulatedContent += content;
+              
+              // Debug log
+              console.log('Received chunk:', content.substring(0, 50));
 
               // Update thinking status based on accumulated content length
               if (accumulatedContent.length < 100) {
@@ -324,17 +331,24 @@ export default function ChatInterface({
                   message.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-800 text-gray-100'
-                }`}
+                } ${message.content === '' && message.isStreaming ? 'min-h-[60px]' : ''}`}
               >
                 {message.role === 'assistant' ? (
-                  <MarkdownRenderer content={message.content} />
+                  message.content ? (
+                    <MarkdownRenderer content={message.content} />
+                  ) : message.isStreaming ? (
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                      <span className="text-sm">Waiting for response...</span>
+                    </div>
+                  ) : null
                 ) : (
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 )}
-                {message.isStreaming && (
+                {message.isStreaming && message.content && (
                   <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
                     <Loader2 size={12} className="animate-spin" />
-                    <span>Thinking...</span>
+                    <span>Streaming...</span>
                   </div>
                 )}
               </div>
