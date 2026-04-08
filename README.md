@@ -1,4 +1,4 @@
-# ?? Gemini Swarm Intelligence: The GGUF-First Orchestrator
+# Swarm Intelligence: The GGUF-First Orchestrator
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/PKief/vscode-material-icon-theme/master/icons/brain.svg" width="120" alt="Swarm Logo" />
@@ -12,7 +12,7 @@
 
 ---
 
-## ?? Overview
+##  Overview
 
 **Gemini Swarm Intelligence** is a professional-grade, local-first multi-agent orchestration system. It is engineered to extract maximum cognitive performance from constrained consumer hardware by leveraging a **hierarchical swarm pipeline** of GGUF-quantized models.
 
@@ -40,30 +40,30 @@ graph TD
 
 ---
 
-## ?? Advanced Features
+##  Advanced Features
 
-### ?? **The Reflection Step (Self-Correction)**
+###  **The Reflection Step (Self-Correction)**
 The system is now **fully self-aware**. We implemented a "Logic Guard" where the **Critic Agent** evaluates the **Executor's** work using structured JSON feedback. 
 - **Quality Scoring:** 1-10 scale.
 - **Auto-Regeneration:** If a draft scores below 7, the Executor is automatically re-invoked with the specific feedback to fix errors before the user even sees it.
 
-### ?? **Token-Aware Context Memory**
+###  **Token-Aware Context Memory**
 Traditional "last 10 messages" memory is obsolete. Our ContextManager uses **dynamic token density monitoring**:
 - It calculates the estimated token load and fills the context window up to a strict limit (e.g., 2000 tokens).
 - Prevents model degradation and "forgetting" by ensuring the prompt always fits perfectly within the GGUF model's 
 _ctx.
 
-### ?? **VRAM Concurrency Protection**
+###  **VRAM Concurrency Protection**
 Running multiple LLMs locally is dangerous for your GPU. We solved this with:
 - **syncio.Lock() System:** Prevents simultaneous model allocations that would crash your drivers.
 - **Hybrid Offloading:** Automatic calculation of how many layers fit in your VRAM vs. System RAM.
 
-### ?? **Windows Zombie Killer**
+###  **Windows Zombie Killer**
 Local development often leaves orphaned processes. Our **Lifespan Manager** detects and kills "zombie" llama-server.exe instances automatically on shutdown, keeping your system clean and your VRAM free.
 
 ---
 
-## ?? Tech Stack
+##  Tech Stack
 
 | Component | Technology |
 | :--- | :--- |
@@ -75,7 +75,7 @@ Local development often leaves orphaned processes. Our **Lifespan Manager** dete
 
 ---
 
-## ?? Setup & Installation
+##  Setup & Installation
 
 ### 1. Prerequisites
 - Python 3.10+
@@ -98,7 +98,7 @@ npm run dev
 
 ---
 
-## ?? Configurable Agents (configs/agents.yaml)
+##  Configurable Agents (configs/agents.yaml)
 
 You can define your own agent personalities and logic flows:
 
@@ -114,7 +114,7 @@ critic:
 
 ---
 
-## ?? License
+##  License
 Distributed under the MIT License. See LICENSE for more information.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
