@@ -390,6 +390,46 @@ async def get_conversation(conversation_id: str) -> dict[str, Any]:
         return {"conversation_id": conversation_id, "messages": [], "total": 0, "error": str(e)}
 
 
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str) -> dict[str, Any]:
+    """Delete a conversation and all its messages.
+    
+    Args:
+        conversation_id: The conversation ID to delete
+        
+    Returns:
+        Dictionary with deletion status
+    """
+    from backend.app.database.db import async_session_maker, ConversationTrace
+    from sqlalchemy import delete
+    
+    try:
+        async with async_session_maker() as session:
+            # Delete all traces for this conversation
+            stmt = (
+                delete(ConversationTrace)
+                .where(
+                    ConversationTrace.trace_metadata["conversation_id"].as_string() == conversation_id
+                )
+            )
+            
+            result = await session.execute(stmt)
+            await session.commit()
+            
+            deleted_count = result.rowcount
+            logger.info(f"Deleted conversation {conversation_id}: {deleted_count} messages removed")
+            
+            return {
+                "success": True,
+                "conversation_id": conversation_id,
+                "deleted_messages": deleted_count,
+            }
+            
+    except Exception as e:
+        logger.error(f"Failed to delete conversation {conversation_id}: {e}")
+        return {"success": False, "conversation_id": conversation_id, "error": str(e)}
+
+
 @router.get("/pools")
 async def list_pools() -> dict[str, Any]:
     """List available model pools.

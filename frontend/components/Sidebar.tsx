@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Plus, ChevronRight, Loader2 } from 'lucide-react';
+import { MessageSquare, Plus, ChevronRight, Loader2, Trash2, AlertCircle } from 'lucide-react';
 
 interface Conversation {
   id: string;
@@ -24,6 +24,8 @@ export default function Sidebar({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const fetchConversations = async () => {
     try {
@@ -49,6 +51,42 @@ export default function Sidebar({
     const interval = setInterval(fetchConversations, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleDelete = async (e: React.MouseEvent, convId: string) => {
+    e.stopPropagation();
+    
+    if (confirmDelete === convId) {
+      // Actually delete
+      try {
+        setDeletingId(convId);
+        const response = await fetch(`http://127.0.0.1:8000/api/chat/conversations/${convId}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete');
+        }
+        
+        // Remove from list
+        setConversations(prev => prev.filter(c => c.id !== convId));
+        
+        // If this was the active conversation, go to new conversation
+        if (activeConversationId === convId) {
+          onNewConversation();
+        }
+      } catch (err) {
+        console.error('Error deleting conversation:', err);
+      } finally {
+        setDeletingId(null);
+        setConfirmDelete(null);
+      }
+    } else {
+      // Show confirmation
+      setConfirmDelete(convId);
+      // Auto-hide confirmation after 3 seconds
+      setTimeout(() => setConfirmDelete(prev => prev === convId ? null : prev), 3000);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -87,10 +125,11 @@ export default function Sidebar({
           </div>
         ) : error ? (
           <div className="p-4 text-center">
+            <AlertCircle size={48} className="mx-auto mb-3 text-red-500 opacity-70" />
             <p className="text-red-400 text-sm">{error}</p>
             <button
               onClick={fetchConversations}
-              className="mt-2 text-blue-400 hover:text-blue-300 text-sm"
+              className="mt-3 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-blue-400 hover:text-blue-300 rounded-lg text-sm transition-colors"
             >
               Retry
             </button>
@@ -104,17 +143,18 @@ export default function Sidebar({
         ) : (
           <div className="py-2">
             {conversations.map((conv) => (
-              <button
+              <div
                 key={conv.id}
-                onClick={() => onSelectConversation(conv.id)}
-                className={`w-full text-left p-3 mx-2 rounded-lg transition-colors group ${
+                className={`group mx-2 rounded-lg transition-all ${
                   activeConversationId === conv.id
                     ? 'bg-gray-800 border-l-4 border-blue-500'
                     : 'hover:bg-gray-800/50 border-l-4 border-transparent'
                 }`}
-                style={{ width: 'calc(100% - 16px)' }}
               >
-                <div className="flex items-start gap-3">
+                <button
+                  onClick={() => onSelectConversation(conv.id)}
+                  className="w-full text-left p-3 flex items-start gap-3"
+                >
                   <MessageSquare 
                     size={18} 
                     className={`mt-0.5 flex-shrink-0 ${
@@ -136,14 +176,35 @@ export default function Sidebar({
                       </span>
                     </div>
                   </div>
-                  <ChevronRight 
-                    size={16} 
-                    className={`flex-shrink-0 transition-opacity ${
-                      activeConversationId === conv.id ? 'opacity-100 text-blue-400' : 'opacity-0 group-hover:opacity-50'
-                    }`} 
-                  />
-                </div>
-              </button>
+                  <div className="flex items-center gap-1">
+                    {confirmDelete === conv.id ? (
+                      <button
+                        onClick={(e) => handleDelete(e, conv.id)}
+                        className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors animate-pulse"
+                        title="Click again to confirm delete"
+                      >
+                        <AlertCircle size={14} />
+                      </button>
+                    ) : deletingId === conv.id ? (
+                      <Loader2 size={16} className="animate-spin text-gray-400" />
+                    ) : (
+                      <button
+                        onClick={(e) => handleDelete(e, conv.id)}
+                        className="p-1.5 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete conversation"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                    <ChevronRight 
+                      size={16} 
+                      className={`flex-shrink-0 transition-opacity text-gray-500 ${
+                        activeConversationId === conv.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
+                      }`} 
+                    />
+                  </div>
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -151,9 +212,16 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span>System Online</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span>System Online</span>
+          </div>
+          {conversations.length > 0 && (
+            <span className="text-xs text-gray-600">
+              {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
       </div>
     </div>
