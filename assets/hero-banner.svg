@@ -1,0 +1,68 @@
+<rect width="1200" height="320" rx="28" fill="url(#bg)"/>
+
+<g opacity="0.22">
+  <path d="M40 260C180 160 310 120 420 145C555 175 650 255 780 245C920 234 1030 128 1160 70" stroke="url(#accent)" stroke-width="2" stroke-dasharray="8 8">
+    <animate attributeName="stroke-dashoffset" from="0" to="-64" dur="4s" repeatCount="indefinite"/>
+  </path>
+  <path d="M20 220C200 130 325 105 445 135C565 166 665 240 810 220C940 201 1045 125 1180 40" stroke="url(#accent)" stroke-width="2" stroke-dasharray="10 10">
+    <animate attributeName="stroke-dashoffset" from="0" to="64" dur="5s" repeatCount="indefinite"/>
+  </path>
+</g>
+
+<g filter="url(#glow)">
+  <circle cx="245" cy="160" r="5" fill="#7DD3FC">
+    <animate attributeName="cx" values="210;260;210" dur="4.2s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="170;145;170" dur="4.2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="310" cy="135" r="4" fill="#67E8F9">
+    <animate attributeName="cx" values="310;360;310" dur="5.2s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="135;165;135" dur="5.2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="390" cy="185" r="5" fill="#34D399">
+    <animate attributeName="cx" values="390;455;390" dur="4.6s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="185;145;185" dur="4.6s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="475" cy="145" r="4" fill="#93C5FD">
+    <animate attributeName="cx" values="475;550;475" dur="5.6s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="145;175;145" dur="5.6s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="560" cy="185" r="5" fill="#22D3EE">
+    <animate attributeName="cx" values="560;640;560" dur="4.8s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="185;145;185" dur="4.8s" repeatCount="indefinite"/>
+  </circle>
+</g>
+
+<g>
+  <text x="82" y="110" fill="white" font-size="42" font-weight="700" font-family="Inter,Segoe UI,Arial,sans-serif">
+    Swarm Intelligence
+  </text>
+  <text x="82" y="148" fill="#93C5FD" font-size="19" font-weight="600" font-family="Inter,Segoe UI,Arial,sans-serif">
+    The GGUF-First Orchestrator
+  </text>
+  <text x="82" y="196" fill="#D1D5DB" font-size="18" font-family="Inter,Segoe UI,Arial,sans-serif">
+    Hierarchical local agents for planning, execution, critique, memory, and safe runtime control.
+  </text>
+  <text x="82" y="226" fill="#9CA3AF" font-size="15" font-family="Inter,Segoe UI,Arial,sans-serif">
+    Built for constrained hardware. Optimized for practical local inference.
+  </text>
+</g>
+
+<g transform="translate(830 62)">
+  <rect x="0" y="0" width="280" height="188" rx="22" fill="#0F172A" stroke="#1F2937"/>
+  <rect x="18" y="18" width="92" height="28" rx="8" fill="#111827" stroke="#1F2937"/>
+  <text x="31" y="37" fill="#E5E7EB" font-size="13" font-family="Inter,Segoe UI,Arial,sans-serif">Runtime Loop</text>
+  <rect x="18" y="62" width="78" height="24" rx="12" fill="#172554"/>
+  <text x="36" y="78" fill="#BFDBFE" font-size="12" font-family="Inter,Segoe UI,Arial,sans-serif">Planner</text>
+  <rect x="106" y="62" width="82" height="24" rx="12" fill="#083344"/>
+  <text x="126" y="78" fill="#A5F3FC" font-size="12" font-family="Inter,Segoe UI,Arial,sans-serif">Executor</text>
+  <rect x="198" y="62" width="64" height="24" rx="12" fill="#052E2B"/>
+  <text x="216" y="78" fill="#A7F3D0" font-size="12" font-family="Inter,Segoe UI,Arial,sans-serif">Critic</text>
+  <path d="M55 102C88 123 130 123 160 102C188 84 220 84 244 102" stroke="url(#accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 8">
+    <animate attributeName="stroke-dashoffset" from="0" to="-56" dur="3.2s" repeatCount="indefinite"/>
+  </path>
+  <rect x="18" y="132" width="244" height="22" rx="11" fill="#111827"/>
+  <rect x="18" y="132" width="146" height="22" rx="11" fill="url(#accent)">
+    <animate attributeName="width" values="95;180;146;200;146" dur="5s" repeatCount="indefinite"/>
+  </rect>
+  <text x="18" y="176" fill="#9CA3AF" font-size="12" font-family="Inter,Segoe UI,Arial,sans-serif">Context · VRAM · Process Safety · Local Models</text>
+</g>
