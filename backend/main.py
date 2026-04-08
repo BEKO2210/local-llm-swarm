@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.chat import router as chat_router
 from backend.app.core.config import get_settings
@@ -56,6 +57,15 @@ app = FastAPI(
     description="Local multi-agent swarm system optimized for constrained hardware",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# Configure CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include API routers

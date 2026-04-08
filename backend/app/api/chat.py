@@ -273,6 +273,70 @@ async def swarm_chat(request: SwarmRequest) -> StreamingResponse:
     )
 
 
+@router.get("/conversations")
+async def list_conversations(limit: int = 20) -> dict[str, Any]:
+    """List recent conversations from the database.
+    
+    Args:
+        limit: Maximum number of conversations to return
+        
+    Returns:
+        Dictionary with conversation list
+    """
+    from backend.app.database.db import async_session_maker, ConversationTrace
+    from sqlalchemy import select, func, desc
+    
+    try:
+        async with async_session_maker() as session:
+            # Get unique conversation_ids with their latest message
+            stmt = (
+                select(
+                    ConversationTrace.trace_metadata["conversation_id"].as_string().label("conv_id"),
+                    func.max(ConversationTrace.created_at).label("last_updated"),
+                    func.count(ConversationTrace.id).label("message_count"),
+                )
+                .where(ConversationTrace.trace_metadata["conversation_id"].is_not(None))
+                .group_by(ConversationTrace.trace_metadata["conversation_id"].as_string())
+                .order_by(desc(func.max(ConversationTrace.created_at)))
+                .limit(limit)
+            )
+            
+            result = await session.execute(stmt)
+            conversations = []
+            
+            for row in result:
+                # Get the first user message as title
+                title_stmt = (
+                    select(ConversationTrace.content)
+                    .where(
+                        ConversationTrace.trace_metadata["conversation_id"].as_string() == row.conv_id,
+                        ConversationTrace.role == "user"
+                    )
+                    .order_by(ConversationTrace.created_at)
+                    .limit(1)
+                )
+                title_result = await session.execute(title_stmt)
+                first_message = title_result.scalar()
+                
+                title = first_message[:50] + "..." if first_message and len(first_message) > 50 else (first_message or "Untitled")
+                
+                conversations.append({
+                    "id": row.conv_id,
+                    "title": title,
+                    "last_updated": row.last_updated.isoformat() if row.last_updated else None,
+                    "message_count": row.message_count,
+                })
+            
+            return {
+                "conversations": conversations,
+                "total": len(conversations),
+            }
+            
+    except Exception as e:
+        logger.error(f"Failed to fetch conversations: {e}")
+        return {"conversations": [], "total": 0, "error": str(e)}
+
+
 @router.get("/pools")
 async def list_pools() -> dict[str, Any]:
     """List available model pools.

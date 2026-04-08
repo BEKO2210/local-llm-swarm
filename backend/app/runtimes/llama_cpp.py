@@ -41,12 +41,19 @@ class LlamaCppProvider(BaseRuntimeProvider):
 
     @property
     def client(self) -> httpx.AsyncClient:
-        """Get or create the HTTP client."""
+        """Get or create the HTTP client with limited connections."""
         if self._client is None:
+            # Limit connections to prevent Windows socket exhaustion
+            limits = httpx.Limits(
+                max_connections=10,
+                max_keepalive_connections=5,
+                keepalive_expiry=30.0,
+            )
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
                 timeout=self.timeout,
                 headers={"Content-Type": "application/json"},
+                limits=limits,
             )
         return self._client
 
@@ -72,20 +79,31 @@ class LlamaCppProvider(BaseRuntimeProvider):
         Returns:
             True if server is ready, False if timed out
         """
-        for attempt in range(self.max_retries):
-            try:
-                response = await self.client.get("/health", timeout=5.0)
-                if response.status_code == 200:
-                    logger.debug(f"Server {self.base_url} is ready")
-                    return True
-            except Exception:
-                pass
+        # Use a separate client with shorter timeout for health checks
+        # to avoid blocking the main client
+        health_client = httpx.AsyncClient(
+            base_url=self.base_url,
+            timeout=5.0,
+            limits=httpx.Limits(max_connections=3, max_keepalive_connections=1),
+        )
+        
+        try:
+            for attempt in range(self.max_retries):
+                try:
+                    response = await health_client.get("/health")
+                    if response.status_code == 200:
+                        logger.debug(f"Server {self.base_url} is ready")
+                        return True
+                except Exception:
+                    pass
 
-            if attempt < self.max_retries - 1:
-                logger.debug(
-                    f"Server not ready, waiting... ({attempt + 1}/{self.max_retries})"
-                )
-                await asyncio.sleep(self.retry_delay)
+                if attempt < self.max_retries - 1:
+                    logger.debug(
+                        f"Server not ready, waiting... ({attempt + 1}/{self.max_retries})"
+                    )
+                    await asyncio.sleep(self.retry_delay)
+        finally:
+            await health_client.aclose()
 
         return False
 

@@ -245,12 +245,18 @@ class ProcessManager:
 
     @property
     def total_vram_used_mb(self) -> int:
-        """Calculate total VRAM currently used by all running processes."""
-        return sum(
-            proc.vram_cost_mb
-            for proc in self._processes.values()
-            if proc.is_running
-        )
+        """Calculate total VRAM currently used by all running processes.
+        
+        Each unique process is counted only once, even if multiple agents
+        reference it.
+        """
+        seen_pids = set()
+        total = 0
+        for proc in self._processes.values():
+            if proc.is_running and proc.pid not in seen_pids:
+                seen_pids.add(proc.pid)
+                total += proc.vram_cost_mb
+        return total
 
     @property
     def available_vram_mb(self) -> int:
@@ -359,6 +365,10 @@ class ProcessManager:
         await asyncio.gather(*tasks, return_exceptions=True)
         
         logger.info("All model instances stopped")
+
+    def get_process(self, instance_id: str) -> LlamaServerProcess | None:
+        """Get a process by instance ID if it exists."""
+        return self._processes.get(instance_id)
 
     def get_status(self) -> dict[str, Any]:
         """Get overall process manager status."""

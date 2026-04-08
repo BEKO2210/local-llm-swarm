@@ -47,6 +47,8 @@ class BaseAgent:
     async def _ensure_model_running(self) -> tuple[str, LlamaCppProvider]:
         """Ensure the model for this pool is running.
         
+        Agents using the same pool share the same process to save VRAM.
+        
         Returns:
             Tuple of (base_url, provider)
         """
@@ -63,16 +65,29 @@ class BaseAgent:
         model_config = settings.get_model(model_id)
         self._model_id = model_id
         
-        # Start the model (respects VRAM budget)
-        try:
-            self._process = await process_manager.start_model(model_id, self.agent_id)
-            self._base_url = f"http://127.0.0.1:{self._process.port}"
+        # Use pool_name as instance_id so agents in the same pool share the process
+        # This prevents VRAM overload from multiple model instances
+        pool_instance_id = f"pool_{self.pool_name}"
+        
+        # Check if this pool's model is already running
+        existing_process = process_manager.get_process(pool_instance_id)
+        if existing_process and existing_process.is_running:
+            self._process = existing_process
+            self._base_url = f"http://127.0.0.1:{existing_process.port}"
             logger.info(
-                f"Agent {self.agent_id}: Model {model_id} running on {self._base_url}"
+                f"Agent {self.agent_id}: Reusing existing pool {self.pool_name} on {self._base_url}"
             )
-        except RuntimeError as e:
-            logger.error(f"Failed to start model for agent {self.agent_id}: {e}")
-            raise
+        else:
+            # Start the model (respects VRAM budget)
+            try:
+                self._process = await process_manager.start_model(model_id, pool_instance_id)
+                self._base_url = f"http://127.0.0.1:{self._process.port}"
+                logger.info(
+                    f"Agent {self.agent_id}: Started new pool {self.pool_name} on {self._base_url}"
+                )
+            except RuntimeError as e:
+                logger.error(f"Failed to start model for agent {self.agent_id}: {e}")
+                raise
         
         # Initialize provider
         self._provider = LlamaCppProvider(base_url=self._base_url)
