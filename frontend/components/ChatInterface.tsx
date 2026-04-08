@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Brain, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 
@@ -35,9 +35,44 @@ export default function ChatInterface({
   const [showThinking, setShowThinking] = useState(true);
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string>('');
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Load conversation history when conversationId changes
+  useEffect(() => {
+    if (conversationId) {
+      loadConversationHistory(conversationId);
+    } else {
+      setMessages([]);
+    }
+  }, [conversationId]);
+
+  const loadConversationHistory = async (convId: string) => {
+    try {
+      setIsLoadingHistory(true);
+      const response = await fetch(`${API_BASE}/api/chat/conversations/${convId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load conversation');
+      }
+      const data = await response.json();
+      
+      if (data.messages && Array.isArray(data.messages)) {
+        const loadedMessages: Message[] = data.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          isStreaming: false,
+        }));
+        setMessages(loadedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -262,7 +297,12 @@ export default function ChatInterface({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <Loader2 size={48} className="animate-spin mb-4" />
+            <p>Loading conversation...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <Brain size={64} className="mb-4 opacity-30" />
             <p className="text-lg font-medium">Welcome to Local LLM Swarm</p>

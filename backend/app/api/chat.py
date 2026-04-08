@@ -337,6 +337,59 @@ async def list_conversations(limit: int = 20) -> dict[str, Any]:
         return {"conversations": [], "total": 0, "error": str(e)}
 
 
+@router.get("/conversations/{conversation_id}")
+async def get_conversation(conversation_id: str) -> dict[str, Any]:
+    """Get all messages for a specific conversation.
+    
+    Args:
+        conversation_id: The conversation ID
+        
+    Returns:
+        Dictionary with conversation messages
+    """
+    from backend.app.database.db import async_session_maker, ConversationTrace
+    from sqlalchemy import select, desc
+    
+    try:
+        async with async_session_maker() as session:
+            # Get all messages for this conversation
+            stmt = (
+                select(ConversationTrace)
+                .where(
+                    ConversationTrace.trace_metadata["conversation_id"].as_string() == conversation_id
+                )
+                .where(ConversationTrace.role.in_(["user", "assistant"]))
+                .order_by(ConversationTrace.created_at)
+            )
+            
+            result = await session.execute(stmt)
+            traces = result.scalars().all()
+            
+            messages = []
+            for trace in traces:
+                # Skip internal pipeline steps (planner/executor/critic)
+                step = trace.trace_metadata.get("step", "") if trace.trace_metadata else ""
+                if step in ["planner", "executor", "critic"]:
+                    continue
+                    
+                messages.append({
+                    "id": trace.id,
+                    "role": trace.role,
+                    "content": trace.content,
+                    "timestamp": trace.created_at.isoformat() if trace.created_at else None,
+                })
+            
+            return {
+                "conversation_id": conversation_id,
+                "messages": messages,
+                "total": len(messages),
+            }
+            
+    except Exception as e:
+        logger.error(f"Failed to fetch conversation {conversation_id}: {e}")
+        return {"conversation_id": conversation_id, "messages": [], "total": 0, "error": str(e)}
+
+
 @router.get("/pools")
 async def list_pools() -> dict[str, Any]:
     """List available model pools.
