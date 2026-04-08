@@ -1,7 +1,7 @@
 # Swarm Intelligence: The GGUF-First Orchestrator
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/PKief/vscode-material-icon-theme/master/icons/brain.svg" width="120" alt="Swarm Logo" />
+  <img src="https://raw.githubusercontent.com/BEKO2210/local-llm-swarm/main/assets/brain.png" width="120" alt="Swarm Logo" />
 </p>
 
 <p align="center">
