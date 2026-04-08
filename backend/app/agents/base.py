@@ -125,7 +125,7 @@ class BaseAgent:
                     pid=self._process.pid,
                     started_at=datetime.now(timezone.utc),
                 )
-                session.add(agent_trace)
+                await session.merge(agent_trace)
                 
                 # Create conversation trace for user message
                 user_trace = ConversationTrace(
@@ -317,3 +317,4 @@ class BaseAgent:
         if self._provider:
             await self._provider.close()
             self._provider = None
+
