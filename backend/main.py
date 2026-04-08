@@ -1,4 +1,4 @@
-"""FastAPI entry point for the Multi-Agent Swarm system."""
+\"\"\"FastAPI entry point for the Multi-Agent Swarm system.\"\"\"
 
 import logging
 from contextlib import asynccontextmanager
@@ -22,32 +22,27 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan handler for startup and shutdown."""
-    # Startup
+    \"\"\"Application lifespan handler for startup and shutdown.\"\"\"
     logger.info("Starting Multi-Agent Swarm system...")
-    
-    # Load configurations
+
     settings = get_settings()
     logger.info(f"Loaded {len(settings.models.models)} models")
     logger.info(f"Loaded {len(settings.pools.pools)} pools")
-    
-    # Initialize database
+
     logger.info("Initializing database...")
     await init_db()
     logger.info("Database initialized successfully")
-    
+
     yield
-    
-    # Shutdown
+
     logger.info("Shutting down Multi-Agent Swarm system...")
-    
-    # Stop all running model processes
+
     process_manager = get_process_manager()
     await process_manager.stop_all()
-    
-    # Close database connections
+    # Forceful cleanup for Windows zombies
+    process_manager.cleanup_zombies()
+
     await close_db()
-    
     logger.info("Shutdown complete")
 
 
@@ -74,9 +69,7 @@ app.include_router(chat_router, prefix="/api")
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check():
-    """Health check endpoint."""
     process_manager = get_process_manager()
-    
     return {
         "status": "healthy",
         "version": "0.1.0",
@@ -90,10 +83,8 @@ async def health_check():
 
 @app.get("/status")
 async def get_system_status():
-    """Get detailed system status including running processes."""
     process_manager = get_process_manager()
     settings = get_settings()
-    
     return {
         "system": {
             "version": settings.app_version,
@@ -120,7 +111,6 @@ async def get_system_status():
 
 if __name__ == "__main__":
     import uvicorn
-    
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",
