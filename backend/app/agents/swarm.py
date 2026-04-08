@@ -1,4 +1,4 @@
-\"\"\"Hierarchical swarm pipeline for multi-agent text refinement with memory.\"\"\"
+"""Hierarchical swarm pipeline for multi-agent text refinement with memory."""
 
 import logging
 import uuid
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class ContextManager:
-    \"\"\"Manages conversation history and context retrieval from the database.\"\"\"
+    """Manages conversation history and context retrieval from the database."""
 
     @staticmethod
     async def fetch_history(
@@ -26,7 +26,7 @@ class ContextManager:
         limit: int = 10,
         max_tokens: int = 2000,
     ) -> list[dict[str, str]]:
-        \"\"\"Fetch the last N messages for a conversation, limited by token count.\"\"\"
+        """Fetch the last N messages for a conversation, limited by token count."""
         try:
             async with async_session_maker() as session:
                 stmt = (
@@ -87,7 +87,7 @@ class ContextManager:
 
 
 class SwarmPipeline:
-    \"\"\"A hierarchical pipeline with persistent memory and reflection step.\"\"\"
+    """A hierarchical pipeline with persistent memory and reflection step."""
 
     def __init__(
         self,

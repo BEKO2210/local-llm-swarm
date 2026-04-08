@@ -1,4 +1,4 @@
-\"\"\"FastAPI entry point for the Multi-Agent Swarm system.\"\"\"
+"""FastAPI entry point for the Multi-Agent Swarm system."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    \"\"\"Application lifespan handler for startup and shutdown.\"\"\"
+    """Application lifespan handler for startup and shutdown."""
     logger.info("Starting Multi-Agent Swarm system...")
 
     settings = get_settings()

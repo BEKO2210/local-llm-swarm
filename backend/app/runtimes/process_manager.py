@@ -1,4 +1,4 @@
-\"\"\"Process manager for self-managed llama-server runtimes.\"\"\"
+"""Process manager for self-managed llama-server runtimes."""
 
 import asyncio
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class LlamaServerProcess:
-    \"\"\"Manages a single llama-server subprocess instance.\"\"\"
+    """Manages a single llama-server subprocess instance."""
 
     def __init__(
         self,
@@ -37,18 +37,18 @@ class LlamaServerProcess:
 
     @property
     def vram_cost_mb(self) -> int:
-        \"\"\"Return the VRAM cost for this model instance.\"\"\"
+        """Return the VRAM cost for this model instance."""
         return self.model_config.vram_estimate_mb
 
     @property
     def is_running(self) -> bool:
-        \"\"\"Check if the process is currently running.\"\"\"
+        """Check if the process is currently running."""
         if self.process is None:
             return False
         return self.process.poll() is None
 
     def _calculate_gpu_layers(self) -> int:
-        \"\"\"Calculate optimal number of GPU layers based on VRAM constraints.\"\"\"
+        """Calculate optimal number of GPU layers based on VRAM constraints."""
         from backend.app.runtimes.process_manager import get_process_manager
 
         process_manager = get_process_manager()
@@ -82,7 +82,7 @@ class LlamaServerProcess:
         return target_layers
 
     def _build_args(self) -> list[str]:
-        \"\"\"Build command-line arguments for llama-server.\"\"\"
+        """Build command-line arguments for llama-server."""
         args = [
             str(self.binary_path),
             "--model", self.model_config.gguf_path,
@@ -101,7 +101,7 @@ class LlamaServerProcess:
         return args
 
     async def start(self, startup_timeout: int = 30) -> bool:
-        \"\"\"Start the llama-server process.\"\"\"
+        """Start the llama-server process."""
         async with self._lock:
             if self.is_running:
                 logger.warning(f"Process for {self.model_id} is already running")
@@ -141,7 +141,7 @@ class LlamaServerProcess:
                 raise
 
     async def stop(self, shutdown_timeout: int = 10) -> bool:
-        \"\"\"Stop the llama-server process and free VRAM.\"\"\"
+        """Stop the llama-server process and free VRAM."""
         async with self._lock:
             if self.process is None:
                 return True
@@ -177,7 +177,7 @@ class LlamaServerProcess:
                 self.started_at = None
 
     def get_status(self) -> dict[str, Any]:
-        \"\"\"Get current status of the process.\"\"\"
+        """Get current status of the process."""
         return {
             "model_id": self.model_id,
             "is_running": self.is_running,
@@ -190,7 +190,7 @@ class LlamaServerProcess:
 
 
 class ProcessManager:
-    \"\"\"Manages multiple llama-server processes with VRAM tracking.\"\"\"
+    """Manages multiple llama-server processes with VRAM tracking."""
 
     def __init__(self):
         self._processes: dict[str, LlamaServerProcess] = {}
@@ -233,7 +233,7 @@ class ProcessManager:
         agent_id: str | None = None,
         allow_overflow: bool = True,
     ) -> LlamaServerProcess:
-        \"\"\"Start a model instance, with optional VRAM overflow handling.\"\"\"
+        """Start a model instance, with optional VRAM overflow handling."""
         async with self._lock:
             from backend.app.core.config import get_settings
             settings = get_settings()
@@ -279,7 +279,7 @@ class ProcessManager:
         self.cleanup_zombies()
 
     def cleanup_zombies(self):
-        \"\"\"Forceful cleanup of zombie llama-server processes on Windows.\"\"\"
+        """Forceful cleanup of zombie llama-server processes on Windows."""
         if os.name == 'nt':
             logger.info("Cleaning up zombie llama-server processes...")
             try:
@@ -289,7 +289,7 @@ class ProcessManager:
                 logger.error(f"Failed to cleanup zombies: {e}")
 
     async def monitor_heartbeat(self):
-        \"\"\"Monitor llama-server instances for health.\"\"\"
+        """Monitor llama-server instances for health."""
         while True:
             for instance_id, proc in list(self._processes.items()):
                 if proc.is_running:

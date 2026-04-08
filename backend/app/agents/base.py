@@ -23,7 +23,7 @@ class BaseAgent:
     def __init__(
         self,
         pool_name: str,
-        role_prompt: str,
+        role_prompt: str = "",
         agent_type: str | None = None,
     ):
         """Initialize the base agent.
