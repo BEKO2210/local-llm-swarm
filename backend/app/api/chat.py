@@ -273,7 +273,7 @@ async def swarm_chat(request: SwarmRequest) -> StreamingResponse:
     )
 
 
-@router.get("/conversations")
+@router.get("/conversations", include_in_schema=True)
 async def list_conversations(limit: int = 20) -> dict[str, Any]:
     """List recent conversations from the database.
     
