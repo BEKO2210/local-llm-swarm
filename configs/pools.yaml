@@ -1,0 +1,24 @@
+pools:
+  orchestrator_pool:
+    name: "Orchestrator Pool"
+    description: "High-capability models for task planning and coordination"
+    models:
+      - llama-3-8b
+    priority: 1
+    max_concurrent: 1
+
+  worker_pool:
+    name: "Worker Pool"
+    description: "Fast, efficient models for task execution"
+    models:
+      - qwen-2.5-3b
+    priority: 2
+    max_concurrent: 2
+
+  heavy_pool:
+    name: "Heavy Pool"
+    description: "High-end specialist models for deep analysis"
+    models:
+      - gemma-4-26b-iq2
+    priority: 3
+    max_concurrent: 1

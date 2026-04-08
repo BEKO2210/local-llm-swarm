@@ -1,0 +1,17 @@
+runtime:
+  llama_server:
+    binary_path: "C:/AI/llama-cpp/llama-server.exe"
+    llama_server_path: "C:/AI/llama-cpp/llama-server.exe"
+    host: "127.0.0.1"
+    port_range:
+      min: 8081
+      max: 8099
+    
+  vram:
+    max_system_budget_mb: 8000
+    safety_margin_mb: 500
+    
+  process:
+    startup_timeout_seconds: 30
+    shutdown_timeout_seconds: 10
+    health_check_interval_seconds: 5
