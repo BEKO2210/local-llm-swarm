@@ -3,13 +3,21 @@ import os
 from string import Template
 
 class PromptManager:
-    def __init__(self, config_path="../configs/agents.yaml"):
+    def __init__(self, config_path="configs/agents.yaml"):
+        # If relative, try to find it from the project root (where main.py is)
+        if not os.path.isabs(config_path) and not os.path.exists(config_path):
+            # Try to find it relative to this file
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            potential_path = os.path.join(base_dir, "configs", "agents.yaml")
+            if os.path.exists(potential_path):
+                config_path = potential_path
+        
         self.config_path = config_path
         self.agents = self._load_config()
 
     def _load_config(self):
         if not os.path.exists(self.config_path):
-            raise FileNotFoundError(f"Config file not found: {self.config_path}")
+            raise FileNotFoundError(f"Config file not found: {self.config_path} (Current CWD: {os.getcwd()})")
         with open(self.config_path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
 

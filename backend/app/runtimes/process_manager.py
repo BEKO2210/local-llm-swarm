@@ -227,6 +227,10 @@ class ProcessManager:
             self._port_counter = self._port_range["min"]
         return port
 
+    def get_process(self, instance_id: str) -> LlamaServerProcess | None:
+        """Get a process by instance ID if it exists."""
+        return self._processes.get(instance_id)
+
     async def start_model(
         self,
         model_id: str,
@@ -308,3 +312,4 @@ def get_process_manager() -> ProcessManager:
     return _process_manager
 
 _process_manager: ProcessManager | None = None
+
