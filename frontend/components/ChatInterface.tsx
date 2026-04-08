@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Loader2, Brain, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 
@@ -36,9 +36,28 @@ export default function ChatInterface({
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string>('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  
+  // Use ref for streaming content to avoid closure staleness
+  const streamingContentRef = useRef('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [input]);
 
   // Load conversation history when conversationId changes
   useEffect(() => {
@@ -60,7 +79,7 @@ export default function ChatInterface({
       
       if (data.messages && Array.isArray(data.messages)) {
         const loadedMessages: Message[] = data.messages.map((msg: any) => ({
-          id: msg.id,
+          id: msg.id || Date.now().toString() + Math.random(),
           role: msg.role,
           content: msg.content,
           isStreaming: false,
@@ -74,22 +93,6 @@ export default function ChatInterface({
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, [input]);
-
   const initializeThinkingSteps = (isDeep: boolean) => {
     const steps: ThinkingStep[] = [
       { agent: 'Planner', status: 'pending', timestamp: new Date() },
@@ -102,14 +105,14 @@ export default function ChatInterface({
     setThinkingSteps(steps);
   };
 
-  const updateThinkingStep = (agent: string, status: ThinkingStep['status']) => {
+  const updateThinkingStep = useCallback((agent: string, status: ThinkingStep['status']) => {
     setThinkingSteps(prev => 
       prev.map(step => 
         step.agent === agent ? { ...step, status, timestamp: new Date() } : step
       )
     );
     setCurrentAgent(status === 'active' ? agent : '');
-  };
+  }, []);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -121,12 +124,16 @@ export default function ChatInterface({
       content: input.trim(),
     };
 
+    // Add user message
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
     initializeThinkingSteps(deepThinking);
 
+    // Create assistant message placeholder
     const assistantMessageId = (Date.now() + 1).toString();
+    streamingContentRef.current = '';
+    
     setMessages(prev => [...prev, {
       id: assistantMessageId,
       role: 'assistant',
@@ -138,6 +145,8 @@ export default function ChatInterface({
     let receivedConversationId = conversationId;
 
     try {
+      console.log('[Chat] Sending request:', { prompt: userMessage.content, conversation_id: conversationId });
+      
       const response = await fetch(`${API_BASE}/api/chat/swarm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -154,87 +163,138 @@ export default function ChatInterface({
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      console.log('[Chat] Response received, starting stream read');
+
       const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
       const decoder = new TextDecoder();
-      let accumulatedContent = '';
+      let buffer = '';
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('[Chat] Stream complete');
+          break;
+        }
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete lines from buffer
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-          for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith('data:')) {
-              const data = trimmedLine.slice(5).trim();
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
 
-              // Skip empty data
-              if (!data) continue;
+          // SSE format: "data: <content>"
+          if (trimmedLine.startsWith('data:')) {
+            const data = trimmedLine.slice(5).trim();
+            
+            if (!data) continue;
 
-              // Check for conversation ID
-              if (data.startsWith('[CONVERSATION_ID:')) {
-                receivedConversationId = data.slice(17, -1);
-                if (onConversationCreated && !conversationId) {
-                  onConversationCreated(receivedConversationId);
-                }
-                continue;
+            console.log('[Chat] SSE data received:', data.substring(0, 50));
+
+            // Handle conversation ID
+            if (data.startsWith('[CONVERSATION_ID:')) {
+              const convId = data.slice(17, -1);
+              receivedConversationId = convId;
+              console.log('[Chat] Received conversation ID:', convId);
+              if (onConversationCreated && !conversationId) {
+                onConversationCreated(convId);
               }
+              continue;
+            }
 
-              // Check for completion or errors
-              if (data === '[DONE]') {
-                setIsLoading(false);
-                setCurrentAgent('');
-                setThinkingSteps(prev => 
-                  prev.map(step => ({ ...step, status: 'completed' }))
-                );
-                continue;
-              }
+            // Handle completion
+            if (data === '[DONE]') {
+              console.log('[Chat] Stream done');
+              setIsLoading(false);
+              setCurrentAgent('');
+              setThinkingSteps(prev => 
+                prev.map(step => ({ ...step, status: 'completed' }))
+              );
+              continue;
+            }
 
-              if (data.startsWith('[ERROR]')) {
-                console.error('Stream error:', data);
-                continue;
-              }
-
-              // Unescape newlines
-              const content = data.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
-              accumulatedContent += content;
-              
-              // Debug log
-              console.log('Received chunk:', content.substring(0, 50));
-
-              // Update thinking status based on accumulated content length
-              if (accumulatedContent.length < 100) {
-                updateThinkingStep('Planner', 'active');
-              } else if (accumulatedContent.length < 500) {
-                updateThinkingStep('Planner', 'completed');
-                updateThinkingStep('Executor', 'active');
-              } else if (accumulatedContent.length < 1000) {
-                updateThinkingStep('Executor', 'completed');
-                updateThinkingStep('Critic', 'active');
-              } else if (deepThinking && accumulatedContent.length > 1000) {
-                updateThinkingStep('Critic', 'completed');
-                updateThinkingStep('Heavy Critic (Gemma 26B)', 'active');
-              }
-
+            // Handle errors
+            if (data.startsWith('[ERROR]')) {
+              console.error('[Chat] Stream error:', data);
               setMessages(prev => 
                 prev.map(msg => 
                   msg.id === assistantMessageId 
-                    ? { ...msg, content: accumulatedContent }
+                    ? { ...msg, content: 'Error: ' + data.slice(7), isStreaming: false }
                     : msg
                 )
               );
+              continue;
+            }
+
+            // Unescape content
+            const content = data
+              .replace(/\\n/g, '\n')
+              .replace(/\\r/g, '\r')
+              .replace(/\\t/g, '\t');
+
+            // Update streaming content
+            streamingContentRef.current += content;
+            
+            // Update message in state
+            setMessages(prev => {
+              const updated = prev.map(msg => 
+                msg.id === assistantMessageId 
+                  ? { ...msg, content: streamingContentRef.current }
+                  : msg
+              );
+              return updated;
+            });
+
+            // Update thinking steps based on content length (approximate)
+            const len = streamingContentRef.current.length;
+            if (len < 50) {
+              updateThinkingStep('Planner', 'active');
+            } else if (len < 200) {
+              updateThinkingStep('Planner', 'completed');
+              updateThinkingStep('Executor', 'active');
+            } else if (len < 500) {
+              updateThinkingStep('Executor', 'completed');
+              updateThinkingStep('Critic', 'active');
+            } else if (deepThinking && len > 1000) {
+              updateThinkingStep('Critic', 'completed');
+              updateThinkingStep('Heavy Critic (Gemma 26B)', 'active');
             }
           }
         }
       }
+
+      // Process any remaining buffer
+      if (buffer.trim()) {
+        const line = buffer.trim();
+        if (line.startsWith('data:')) {
+          const data = line.slice(5).trim();
+          if (data && !data.startsWith('[')) {
+            streamingContentRef.current += data.replace(/\\n/g, '\n');
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id === assistantMessageId 
+                  ? { ...msg, content: streamingContentRef.current }
+                  : msg
+              )
+            );
+          }
+        }
+      }
+
     } catch (error) {
+      console.error('[Chat] Error:', error);
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Request aborted');
+        console.log('[Chat] Request aborted');
       } else {
-        console.error('Error:', error);
         setMessages(prev => 
           prev.map(msg => 
             msg.id === assistantMessageId 
@@ -246,6 +306,9 @@ export default function ChatInterface({
     } finally {
       setIsLoading(false);
       setCurrentAgent('');
+      setThinkingSteps(prev => 
+        prev.map(step => ({ ...step, status: 'completed' }))
+      );
       setMessages(prev => 
         prev.map(msg => 
           msg.id === assistantMessageId 
@@ -253,6 +316,7 @@ export default function ChatInterface({
             : msg
         )
       );
+      streamingContentRef.current = '';
     }
   };
 
@@ -281,25 +345,27 @@ export default function ChatInterface({
         <div>
           <h1 className="text-xl font-semibold text-white">Swarm Chat</h1>
           <p className="text-sm text-gray-500">
-            {deepThinking ? 'Deep Thinking Mode (4 stages)' : 'Standard Mode (3 stages)'}
+            {conversationId ? `Conversation: ${conversationId.slice(0, 12)}...` : 'New Conversation'}
           </p>
         </div>
 
-        {/* Deep Thinking Toggle */}
-        <button
-          onClick={() => setDeepThinking(!deepThinking)}
-          disabled={isLoading}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-            deepThinking 
-              ? 'bg-purple-600/20 text-purple-300 border border-purple-500/50' 
-              : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700'
-          }`}
-        >
-          {deepThinking ? <Brain size={18} /> : <Zap size={18} />}
-          <span className="text-sm font-medium">
-            {deepThinking ? 'Deep Thinking' : 'Fast Mode'}
-          </span>
-        </button>
+        <div className="flex items-center gap-4">
+          {/* Deep Thinking Toggle */}
+          <button
+            onClick={() => setDeepThinking(!deepThinking)}
+            disabled={isLoading}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              deepThinking 
+                ? 'bg-purple-600/20 text-purple-300 border border-purple-500/50' 
+                : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700'
+            }`}
+          >
+            {deepThinking ? <Brain size={18} /> : <Zap size={18} />}
+            <span className="text-sm font-medium">
+              {deepThinking ? 'Deep' : 'Fast'}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -321,7 +387,7 @@ export default function ChatInterface({
             </div>
           </div>
         ) : (
-          messages.map((message) => (
+          messages.map((message, index) => (
             <div
               key={message.id}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -331,24 +397,28 @@ export default function ChatInterface({
                   message.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-800 text-gray-100'
-                } ${message.content === '' && message.isStreaming ? 'min-h-[60px]' : ''}`}
+                }`}
               >
                 {message.role === 'assistant' ? (
-                  message.content ? (
-                    <MarkdownRenderer content={message.content} />
-                  ) : message.isStreaming ? (
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                      <span className="text-sm">Waiting for response...</span>
-                    </div>
-                  ) : null
+                  <div className="min-h-[20px]">
+                    {message.content ? (
+                      <MarkdownRenderer content={message.content} />
+                    ) : message.isStreaming ? (
+                      <div className="flex items-center gap-2 text-gray-400 py-2">
+                        <Loader2 size={16} className="animate-spin" />
+                        <span className="text-sm">Thinking...</span>
+                      </div>
+                    ) : null}
+                  </div>
                 ) : (
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 )}
-                {message.isStreaming && message.content && (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-                    <Loader2 size={12} className="animate-spin" />
-                    <span>Streaming...</span>
+                
+                {/* Streaming indicator */}
+                {message.isStreaming && message.content.length > 0 && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-500 border-t border-gray-700 pt-2">
+                    <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                    <span>Streaming... ({message.content.length} chars)</span>
                   </div>
                 )}
               </div>
