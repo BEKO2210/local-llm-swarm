@@ -1,4 +1,4 @@
-# ?? Multi-Agent Swarm Intelligence System (GGUF Optimized)
+# Multi-Agent Swarm Intelligence System (GGUF Optimized)
 
 [![Status](https://img.shields.io/badge/Status-Operational-brightgreen)]()
 [![Backend](https://img.shields.io/badge/Backend-FastAPI-blue)]()
