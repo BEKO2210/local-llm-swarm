@@ -5,10 +5,10 @@
 [![Frontend](https://img.shields.io/badge/Frontend-Next.js-black)]()
 [![Engine](https://img.shields.io/badge/Engine-llama.cpp-orange)]()
 
-## ?? Overview
+##  Overview
 This is a high-performance, local-first multi-agent swarm system designed to squeeze maximum intelligence out of constrained hardware. By orchestrating multiple GGUF models (like Gemma, Mistral, Llama) through a hierarchical pipeline, we achieve reasoning capabilities that far exceed a single small model.
 
-## ?? Key Features
+##  Key Features
 
 ### 1. **Intelligence Overhaul: The Reflection Loop**
 The system is now 'self-aware'. Every output goes through a mandatory **Reflection Step**:
@@ -31,13 +31,13 @@ Centralized prompt logic inspired by industry standards:
 - **Windows Zombie Killer**: Automatic forceful cleanup of orphaned llama-server.exe processes on shutdown or failure using 	askkill.
 - **Heartbeat Monitor**: Self-healing runtime that detects unresponsive models and restarts them automatically.
 
-## ?? Tech Stack
+##  Tech Stack
 - **Core**: Python 3.10+ / FastAPI
 - **LLM Engine**: llama.cpp (llama-server)
 - **Database**: SQLite with SQLAlchemy (Async)
 - **Frontend**: Next.js 14, TailwindCSS, TypeScript
 
-## ?? Setup & Installation
+##  Setup & Installation
 
 ### Backend
 1. Install dependencies: pip install -r requirements.txt
@@ -50,7 +50,7 @@ pm install
 2. Start Dev: 
 pm run dev
 
-## ?? Agent Roles
+##  Agent Roles
 - **Planner**: Architect of the solution.
 - **Executor**: The builder. Implements the code/text.
 - **Critic**: The perfectionist. Quality assurance & feedback loop.
